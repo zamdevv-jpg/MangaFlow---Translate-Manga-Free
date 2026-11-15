@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hasil Terjemahan — MangaFlow</title>
+  <link rel="stylesheet" href="viewer.css">
+</head>
+<body>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" id="brandHome" href="#">
+      <span class="brand-mark" aria-hidden="true">M</span>
+      <span class="brand-copy">
+        <strong>MangaFlow</strong>
+        <small>HASIL TERJEMAHAN</small>
+      </span>
+    </a>
+    <nav class="top-actions">
+      <a class="action ghost" id="openWeb" href="#" target="_blank" rel="noopener">Buka MangaFlow</a>
+      <a class="action ghost" id="openEditor" href="#" target="_blank" rel="noopener">Editor</a>
+      <a class="action primary" id="downloadPage" href="#" download>Unduh PNG</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="intro">
+      <div class="intro-copy">
+        <span class="eyebrow">Screenshot / halaman terjemahan</span>
+        <h1 id="title">Memuat hasil…</h1>
+        <p id="subtitle">Menghubungi server MangaFlow lokal.</p>
+      </div>
+      <span class="status-chip" id="statusChip"><i></i> Memuat</span>
+    </section>
+
+    <section class="compare-card">
+      <div class="compare-top">
+        <div class="segmented" role="group" aria-label="Mode perbandingan">
+          <button data-compare="0" type="button">Asli</button>
+          <button data-compare="50" class="is-active" type="button">Bandingkan</button>
+          <button data-compare="100" type="button">Terjemahan</button>
+        </div>
+        <span class="compare-hint">Geser garis untuk membandingkan</span>
+      </div>
+
+      <div class="compare-wrap">
+        <div class="stage" id="stage">
+          <img id="beforeImg" alt="Halaman asli">
+          <img id="afterImg" class="after" alt="Halaman terjemahan">
+          <span class="compare-badge left">Asli</span>
+          <span class="compare-badge right">Terjemahan</span>
+          <span class="divider" id="divider" aria-hidden="true"></span>
+          <div class="stage-cover" id="stageCover">
+            <span class="spinner"></span>
+            <span id="stageCoverText">Memuat halaman…</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="slider-row">
+        <input id="compareRange" type="range" min="0" max="100" value="50" aria-label="Posisi perbandingan">
+      </div>
+    </section>
+
+    <section class="meta-grid">
+      <article class="meta-card">
+        <span class="meta-label">Mesin</span>
+        <b id="metaEngine">—</b>
+      </article>
+      <article class="meta-card">
+        <span class="meta-label">Bahasa target</span>
+        <b id="metaTarget">—</b>
+      </article>
+      <article class="meta-card">
+        <span class="meta-label">Teks terdeteksi</span>
+        <b id="metaRegions">—</b>
+      </article>
+      <article class="meta-card">
+        <span class="meta-label">Ukuran halaman</span>
+        <b id="metaSize">—</b>
+      </article>
+      <article class="meta-card">
+        <span class="meta-label">Halaman</span>
+        <b id="metaPages">—</b>
+      </article>
+      <article class="meta-card">
+        <span class="meta-label">Dibuat</span>
+        <b id="metaCreated">—</b>
+      </article>
+    </section>
+
+    <section class="pages-card" id="pagesCard" hidden>
+      <div class="pages-head">
+        <div>
+          <span class="eyebrow">Job</span>
+          <h2>Halaman dalam job ini</h2>
+        </div>
+        <span class="pages-count" id="pagesCount">—</span>
+      </div>
+      <div class="page-list" id="pageList"></div>
+    </section>
+
+    <section class="note-card">
+      <span class="note-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5.5c0 4.2 2.8 7.7 7 9.5 4.2-1.8 7-5.3 7-9.5V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.5-3.6"/></svg>
+      </span>
+      <div>
+        <b>Diproses lokal</b>
+        <p>Hasil ini dibuat oleh server MangaFlow milikmu. Tidak ada unggahan ke cloud, tidak ada kredit, dan tidak ada akun. Periksa nama diri serta teks kecil sebelum dipublikasikan.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>MangaFlow · MIT License</span>
+    <a id="repoLink" href="https://github.com/zamdevv-jpg/MangaFlow---Translate-Manga-Free" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script src="viewer.js"></script>
+</body>
+</html>

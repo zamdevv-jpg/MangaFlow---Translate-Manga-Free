@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MangaFlow</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">M</span>
+        <span class="brand-copy">
+          <strong>MangaFlow</strong>
+          <small>LOCAL TRANSLATOR</small>
+        </span>
+      </div>
+      <button class="updates" id="updatesBtn" type="button" title="Lihat pembaruan di GitHub">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+        <span>Pembaruan</span>
+      </button>
+    </header>
+
+    <main class="views" id="views">
+      <!-- ============================== BERANDA ============================== -->
+      <section class="view is-active" data-view="home" aria-label="Beranda">
+        <div class="quick-card">
+          <div class="quick-copy">
+            <span class="quick-title">Auto translate page</span>
+            <span class="quick-sub">Terjemahkan gambar manga otomatis saat dibuka</span>
+          </div>
+          <button class="switch" id="autoToggle" type="button" role="switch" aria-checked="false" aria-label="Auto translate page">
+            <span class="switch-thumb"></span>
+          </button>
+        </div>
+
+        <section class="status-card" id="statusCard" aria-live="polite">
+          <span class="status-watermark" aria-hidden="true">∞</span>
+          <div class="status-top">
+            <span class="status-pill" id="statusPill"><i class="status-dot"></i><span id="statusLabel">Menghubungkan…</span></span>
+            <span class="credit-pill"><b>∞</b> tanpa kredit</span>
+          </div>
+          <div class="status-main">
+            <h1 id="statusHeadline">Server lokal</h1>
+            <p id="statusSub">Argos/OPUS + NLLB-200 · berjalan di komputermu</p>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><span>Mesin</span><b id="statEngine">Lokal</b></div>
+            <div class="stat"><span>Target</span><b id="statTarget">Indonesia</b></div>
+            <div class="stat"><span>Versi</span><b id="statVersion">—</b></div>
+          </div>
+          <div class="status-actions">
+            <button class="btn primary grow" id="translatePageBtn" type="button" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7M7.5 5v2.5c0 3.4-2.2 6.2-4.5 7.5M5 9.5c.8 2.5 2.8 4.4 6 5.5M14 20l3.3-8.5L20.6 20M15.2 17h4.2"/></svg>
+              <span id="translatePageLabel">Terjemahkan halaman</span>
+            </button>
+            <button class="btn icon-btn" id="retryBtn" type="button" title="Cek ulang server" aria-label="Cek ulang server">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/></svg>
+            </button>
+          </div>
+          <p class="page-hint" id="pageHint">Memeriksa halaman aktif…</p>
+        </section>
+
+        <button class="shot-card" id="screenshotBtn" type="button">
+          <span class="shot-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M8 12h8"/></svg>
+          </span>
+          <span class="shot-copy">
+            <b>Screenshot</b>
+            <small>Tangkap area layar lalu terjemahkan</small>
+          </span>
+          <kbd id="shortcutLabel">Ctrl+Shift+S</kbd>
+        </button>
+
+        <div class="lang-card">
+          <label for="targetLang">Terjemahkan ke</label>
+          <div class="select-wrap">
+            <select id="targetLang" aria-label="Bahasa target"></select>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
+          </div>
+        </div>
+
+        <div class="last-job hidden" id="lastJobCard">
+          <div class="last-thumb" id="lastThumb">M</div>
+          <div class="last-copy">
+            <span class="last-eyebrow">Terjemahan terakhir</span>
+            <b id="lastTitle">—</b>
+            <small id="lastMeta">—</small>
+          </div>
+          <button class="last-open" id="lastOpen" type="button" title="Buka hasil" aria-label="Buka hasil terakhir">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ============================= PENGATURAN ============================= -->
+      <section class="view" data-view="settings" aria-label="Pengaturan">
+        <div class="view-head">
+          <h2>Pengaturan</h2>
+          <p>Atur koneksi dan gaya terjemahan. Semua proses tetap lokal.</p>
+        </div>
+
+        <div class="panel-card">
+          <label class="field-label" for="serverUrl">Alamat server MangaFlow</label>
+          <div class="input-row">
+            <input id="serverUrl" type="text" spellcheck="false" autocomplete="off" placeholder="http://127.0.0.1:8765">
+            <button class="btn ghost compact" id="testServerBtn" type="button">Tes</button>
+          </div>
+          <p class="field-hint" id="serverHint">Default: http://127.0.0.1:8765</p>
+        </div>
+
+        <div class="panel-card">
+          <div class="field-grid">
+            <label class="field-label" for="engine">Mesin
+              <select id="engine"></select>
+            </label>
+            <label class="field-label" for="tone">Gaya bahasa
+              <select id="tone">
+                <option value="santai">Santai</option>
+                <option value="netral">Netral</option>
+                <option value="baku">Baku</option>
+              </select>
+            </label>
+            <label class="field-label" for="sourceLang">Bahasa sumber
+              <select id="sourceLang"></select>
+            </label>
+            <label class="field-label" for="targetLang2">Bahasa target
+              <select id="targetLang2"></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="quick-card">
+          <div class="quick-copy">
+            <span class="quick-title">Auto translate page</span>
+            <span class="quick-sub">Aktif untuk semua halaman manga</span>
+          </div>
+          <button class="switch" id="autoToggleSettings" type="button" role="switch" aria-checked="false" aria-label="Auto translate page">
+            <span class="switch-thumb"></span>
+          </button>
+        </div>
+
+        <button class="btn primary wide" id="saveSettingsBtn" type="button">Simpan pengaturan</button>
+        <button class="btn ghost wide" id="openWebBtn" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"/></svg>
+          Buka MangaFlow
+        </button>
+        <p class="fineprint">Kunci API dan mesin online diatur di halaman MangaFlow → <b>Pengaturan mesin &amp; kunci API</b>. Ekstensi ini tidak menyimpan kunci API.</p>
+      </section>
+
+      <!-- ================================ AKUN ================================ -->
+      <section class="view" data-view="account" aria-label="Akun">
+        <div class="account-hero">
+          <span class="account-infinity" aria-hidden="true">∞</span>
+          <h2>Akun lokal</h2>
+          <p>Tidak perlu login, langganan, atau kredit. Semua milikmu.</p>
+          <span class="local-pill"><i></i> Berjalan di perangkat ini</span>
+        </div>
+
+        <div class="info-card">
+          <div class="info-row"><span>Server</span><b id="accountServer">127.0.0.1:8765</b></div>
+          <div class="info-row"><span>Mesin</span><b id="accountEngine">Lokal</b></div>
+          <div class="info-row"><span>Target</span><b id="accountTarget">Indonesia</b></div>
+          <div class="info-row"><span>Lisensi</span><b>MIT</b></div>
+        </div>
+
+        <div class="privacy-card">
+          <span class="privacy-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5.5c0 4.2 2.8 7.7 7 9.5 4.2-1.8 7-5.3 7-9.5V6l-7-3Z"/><path d="m9.5 12 1.8 1.8 3.5-3.6"/></svg>
+          </span>
+          <div>
+            <b>Privasi</b>
+            <p>Gambar hanya dikirim ke server MangaFlow yang kamu tentukan. Tidak ada akun, telemetri, atau kredit.</p>
+          </div>
+        </div>
+
+        <div class="link-list">
+          <button class="link-row" id="accountWebBtn" type="button">
+            <span>Buka MangaFlow</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </button>
+          <button class="link-row" id="accountGithubBtn" type="button">
+            <span>Repositori GitHub</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </button>
+          <button class="link-row" id="accountIssueBtn" type="button">
+            <span>Laporkan masalah</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg>
+          </button>
+        </div>
+
+        <p class="fineprint center">MangaFlow <span id="accountVersion">v1.0.0</span> · dibuat untuk terjemahan lokal</p>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Navigasi ekstensi">
+      <button class="tab is-active" data-tab="home" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-7 8 7v9a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-9Z"/></svg>
+        <span>Beranda</span>
+      </button>
+      <button class="tab" data-tab="settings" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4v-.2a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        <span>Pengaturan</span>
+      </button>
+      <button class="tab" data-tab="account" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>
+        <span>Akun</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ============================== SCREENSHOT ============================== -->
+  <div class="sheet" id="shotSheet" hidden>
+    <header class="sheet-head">
+      <button class="sheet-back" id="shotClose" type="button" aria-label="Kembali">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div class="sheet-title">
+        <b>Screenshot</b>
+        <span id="shotStepLabel">Pilih area yang ingin diterjemahkan</span>
+      </div>
+      <button class="sheet-reset" id="shotReset" type="button" title="Pilih seluruh layar">Penuh</button>
+    </header>
+
+    <div class="sheet-body">
+      <div class="shot-stage" id="shotStage">
+        <div class="shot-frame" id="shotFrame">
+          <img id="shotImage" alt="Tangkapan layar halaman" draggable="false">
+          <div class="shot-selection" id="shotSelection"></div>
+          <div class="shot-grid" id="shotGrid" aria-hidden="true"></div>
+        </div>
+        <div class="shot-loading" id="shotLoading"><span class="tiny-spinner"></span><span>Menangkap layar…</span></div>
+      </div>
+      <p class="shot-tip" id="shotTip">Tarik pada gambar untuk memilih area. Area penuh dipilih otomatis.</p>
+
+      <div class="shot-progress" id="shotProgress" hidden>
+        <div class="progress-line"><i id="shotBar"></i></div>
+        <div class="progress-meta"><span id="shotStatus">Membuat job…</span><b id="shotPercent">0%</b></div>
+      </div>
+
+      <div class="shot-result" id="shotResult" hidden>
+        <img id="shotResultImg" alt="Hasil terjemahan screenshot">
+      </div>
+
+      <div class="shot-actions">
+        <button class="btn primary grow" id="shotTranslateBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h7M7.5 5v2.5c0 3.4-2.2 6.2-4.5 7.5M5 9.5c.8 2.5 2.8 4.4 6 5.5M14 20l3.3-8.5L20.6 20M15.2 17h4.2"/></svg>
+          <span>Terjemahkan area</span>
+        </button>
+        <button class="btn ghost" id="shotOpenBtn" type="button" hidden>Buka hasil</button>
+      </div>
+      <p class="fineprint center">Hanya area yang terlihat di layar yang bisa ditangkap.</p>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="popup.js"></script>
+</body>
+</html>

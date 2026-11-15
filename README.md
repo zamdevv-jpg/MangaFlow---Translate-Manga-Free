@@ -15,6 +15,7 @@ OCR, terjemahan, pembersihan balon, dan penataan huruf dikerjakan secara lokal �
 - [Persyaratan](#persyaratan)
 - [Instalasi](#instalasi)
 - [Cara pakai](#cara-pakai)
+- [Ekstensi Chrome](#ekstensi-chrome)
 - [Model](#model)
 - [Mesin terjemahan](#mesin-terjemahan)
 - [Gaya bahasa](#gaya-bahasa)
@@ -41,6 +42,7 @@ OCR, terjemahan, pembersihan balon, dan penataan huruf dikerjakan secara lokal �
 - **Tata huruf adaptif**: teks Latin/Indonesia selalu horizontal dan tidak pernah diputar. Jika ruang sempit, teks dibungkus menjadi beberapa baris dan ukuran huruf dikecilkan; kata tidak dipotong di tengah kecuali benar-benar tidak muat. Ukuran mengikuti tinggi huruf asli, warna dipilih dari latar bersih, dan latar campuran otomatis diberi garis tepi kontras.
 - **Editor per halaman**: ubah terjemahan, lewati balon, atur jenis huruf, ukuran, warna, dan garis tepi; render ulang seketika.
 - **Viewer** dengan slider sebelum/sesudah, pin balon, zoom, dan navigasi halaman.
+- **Ekstensi Chrome** untuk menerjemahkan gambar manga langsung dari halaman web, termasuk mode auto translate dan screenshot dengan crop.
 - **Unduhan** per halaman atau satu chapter dalam ZIP (termasuk `dialog.txt`).
 - **Riwayat job** tersimpan di disk dan bisa dibuka kembali atau dihapus.
 - Antarmuka bahasa Indonesia, tema manga gelap, responsif untuk layar kecil.
@@ -111,6 +113,33 @@ MANGA_PORT=9000 python app.py
 6. Unduh halaman atau seluruh chapter dalam ZIP.
 
 Semua job dan hasil tersimpan di `data/jobs/`. Riwayat bisa dibuka lewat tombol **Riwayat** di header.
+
+## Ekstensi Chrome
+
+Folder [`extension/`](extension/) berisi ekstensi Manifest V3 untuk menerjemahkan manga langsung dari halaman web. Ekstensi hanya menjadi antarmuka: OCR, terjemahan, redraw, dan typesetting tetap dikerjakan server MangaFlow lokal. Tidak ada akun, kredit, atau unggahan ke cloud.
+
+### Instalasi
+
+1. Jalankan server MangaFlow (`run.bat` atau `python app.py`).
+2. Buka `chrome://extensions`, aktifkan **Developer mode**.
+3. Klik **Load unpacked**, lalu pilih folder `manga-translator/extension`.
+4. Sematkan ikon MangaFlow ke toolbar.
+
+Ekstensi membutuhkan Chrome 105+; shortcut `Ctrl+Shift+S` paling andal di Chrome 127+.
+
+### Cara pakai singkat
+
+- **Terjemahkan halaman** — buka halaman manga, klik ikon MangaFlow, lalu klik **Terjemahkan halaman**. Gambar terbesar di halaman diganti dengan hasil terjemahan.
+- **Auto translate page** — aktifkan toggle agar halaman manga diproses otomatis saat dibuka.
+- **Screenshot** — klik kartu **Screenshot** atau tekan `Ctrl+Shift+S` / `Command+Shift+S`, pilih crop, lalu **Terjemahkan area**. Berguna untuk canvas, background-image, atau situs dengan CSP ketat.
+- **Viewer** — hasil screenshot/halaman bisa dibandingkan sebelum-sesudah, diunduh, atau dibuka di editor MangaFlow.
+- **Pengaturan** — ubah alamat server (misalnya port 9000), mesin, gaya bahasa, dan bahasa target. Kunci API tetap diatur di halaman MangaFlow, bukan di ekstensi.
+
+Panduan lengkap, izin, batasan, dan troubleshooting ada di [`extension/README.md`](extension/README.md).
+
+### Izin dan privasi ekstensi
+
+Ekstensi meminta `tabs`, `activeTab`, `storage`, serta akses `http://*/*`, `https://*/*`, dan `<all_urls>`. Izin host luas diperlukan untuk mengambil gambar manga dari CDN mana pun, menangkap tab untuk fitur Screenshot, dan menghubungi server lokal; tanpa itu, gambar lintas-origin dan `captureVisibleTab` bisa gagal. Gambar hanya dikirim ke alamat server yang diisi di Pengaturan. Pengaturan disimpan di `chrome.storage.sync` (bisa ikut tersinkron ke akun Chrome jika sinkronisasi aktif), sedangkan job terakhir di `chrome.storage.local`. Tidak ada telemetri atau iklan.
 
 ## Model
 
@@ -298,6 +327,17 @@ manga-translator/
 │  ├─ assets/
 │  ├─ demo/
 │  └─ fonts/
+├─ extension/             # ekstensi Chrome MV3
+│  ├─ manifest.json       # izin, content script, shortcut
+│  ├─ background.js       # jembatan API server, job, screenshot, viewer
+│  ├─ content.js          # deteksi gambar, ganti/pulihkan, panel halaman
+│  ├─ popup.html          # popup Beranda/Pengaturan/Akun/Screenshot
+│  ├─ popup.css
+│  ├─ popup.js            # status server, pengaturan, crop, polling
+│  ├─ viewer.html         # viewer hasil sebelum/sesudah
+│  ├─ viewer.css
+│  ├─ viewer.js
+│  └─ README.md           # panduan instalasi, izin, batasan
 ├─ samples/               # contoh halaman + skrip unduh NLLB
 ├─ data/                  # runtime, diabaikan Git (job, model, settings)
 ├─ requirements.txt
