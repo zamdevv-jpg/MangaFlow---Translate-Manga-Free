@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b0f">
+  <title>MangaFlow — Penerjemah Manga Tanpa Limit</title>
+  <meta name="description" content="Terjemahkan manga, manhwa, dan webtoon langsung dari browser. OCR, terjemahan, dan redraw berjalan lokal. Tanpa kredit, tanpa langganan, tanpa batas.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23ff3b30'/%3E%3Ctext x='32' y='45' font-family='Arial Black,Arial' font-size='38' font-weight='900' text-anchor='middle' fill='%23fff'%3EM%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="bg-halftone" aria-hidden="true"></div>
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#/" id="brandHome" aria-label="MangaFlow">
+      <span class="brand-mark">M</span>
+      <span class="brand-type">MANGAFLOW<small>LOCAL TRANSLATOR</small></span>
+    </a>
+    <nav class="site-nav" aria-label="Navigasi utama">
+      <a href="#fitur">Fitur</a>
+      <a href="#cara-kerja">Cara kerja</a>
+      <a href="#model">Model lokal</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="header-actions">
+      <span class="pill pill-live"><i></i> TANPA LIMIT</span>
+      <button class="btn btn-ghost btn-sm" id="historyBtn" type="button">Riwayat</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- ============================== HOME ============================== -->
+    <section id="home-view" class="view">
+      <section class="hero wrap">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="jp">漫画</span> OPEN-SOURCE · OFFLINE-FIRST</div>
+          <h1>BACA MANGA.<br><em>TANPA BATAS.</em></h1>
+          <p class="hero-lead">
+            Tempel halaman raw, biar MangaFlow yang membaca balon, menerjemahkan dialog,
+            dan menata ulang hurufnya. Semua berjalan di komputermu — tanpa kredit,
+            tanpa langganan, tanpa antrean.
+          </p>
+          <div class="hero-actions">
+            <a href="#translate" class="btn btn-primary btn-lg">Mulai terjemahkan
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </a>
+            <button class="btn btn-paper btn-lg" id="heroSampleBtn" type="button">Lihat contoh</button>
+          </div>
+          <ul class="hero-checks">
+            <li><span class="check">✓</span> OCR manga lokal</li>
+            <li><span class="check">✓</span> 49 bahasa target</li>
+            <li><span class="check">✓</span> Editor teks</li>
+          </ul>
+          <div class="hero-stats">
+            <div><strong>0</strong><span>kredit / limit</span></div>
+            <div><strong>49</strong><span>bahasa</span></div>
+            <div><strong>100%</strong><span>lokal</span></div>
+          </div>
+        </div>
+
+        <div class="demo-card">
+          <div class="demo-chrome">
+            <span class="dot red"></span><span class="dot yellow"></span><span class="dot green"></span>
+            <span class="demo-title">E01P01 · Pepper &amp; Carrot</span>
+            <span class="demo-badge">LIVE PREVIEW</span>
+          </div>
+          <div class="demo-frame" id="demoCompare">
+            <img class="demo-img" src="/demo/before.jpg" alt="Halaman manga asli berbahasa Inggris">
+            <div class="demo-after" id="demoAfter">
+              <img class="demo-img" src="/demo/after.jpg" alt="Halaman manga hasil terjemahan Indonesia">
+            </div>
+            <div class="demo-divider" id="demoDivider"><span></span></div>
+            <span class="demo-tag tag-left">ASLI</span>
+            <span class="demo-tag tag-right">HASIL</span>
+            <input class="demo-range" id="demoRange" type="range" min="0" max="100" value="52" aria-label="Bandingkan sebelum dan sesudah">
+          </div>
+          <div class="demo-foot">
+            <span>Contoh nyata · Inggris → Indonesia</span>
+            <a href="https://www.peppercarrot.com/" target="_blank" rel="noopener">Pepper &amp; Carrot © David Revoy · CC BY 4.0</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="upload-section wrap" id="translate">
+        <form id="uploadForm" novalidate>
+          <div class="section-head upload-head">
+            <div>
+              <div class="kicker">01 — UNGGAH</div>
+              <h2>Mulai terjemahkan</h2>
+            </div>
+            <div class="engine-note" id="engineNote">
+              <span class="pulse-dot"></span>
+              <span>Mesin lokal siap · tanpa internet setelah model terunduh</span>
+            </div>
+          </div>
+
+          <div class="upload-card">
+            <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Unggah halaman manga">
+              <input type="file" id="fileInput" multiple accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.gif,.zip,.cbz">
+              <div class="drop-art" aria-hidden="true">
+                <svg viewBox="0 0 64 64" width="54" height="54" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M32 43V13M20 25l12-12 12 12"/><path d="M11 37v11a4 4 0 0 0 4 4h34a4 4 0 0 0 4-4V37"/>
+                </svg>
+              </div>
+              <h3>Tarik halaman manga ke sini</h3>
+              <p>atau <button class="link-btn" type="button" id="browseBtn">pilih file dari perangkat</button></p>
+              <p class="drop-hint" id="dropHint">PNG, JPG, WEBP, ZIP, CBZ · maks. 300 halaman · 500 MB</p>
+            </div>
+
+            <div class="file-list hidden" id="fileList">
+              <div class="file-list-head">
+                <span id="fileCount">0 file</span>
+                <button class="link-btn danger" id="clearFiles" type="button">Hapus semua</button>
+              </div>
+              <div class="file-grid" id="fileGrid"></div>
+            </div>
+
+            <div class="options-grid">
+              <label class="field">
+                <span>Bahasa sumber</span>
+                <select id="srcLang"></select>
+              </label>
+              <label class="field">
+                <span>Terjemahkan ke</span>
+                <select id="tgtLang"></select>
+              </label>
+              <label class="field">
+                <span>Mesin terjemahan</span>
+                <select id="engine"></select>
+                <small id="engineHelp">Argos/OPUS lokal · cepat &amp; tanpa limit</small>
+                <button class="link-btn engine-settings-link" id="engineSettingsBtn" type="button">Pengaturan mesin &amp; kunci API</button>
+              </label>
+              <label class="field">
+                <span>Gaya huruf</span>
+                <select id="fontStyle">
+                  <option value="comic">Comic (default)</option>
+                  <option value="sans">Sans tebal</option>
+                  <option value="serif">Serif klasik</option>
+                  <option value="cjk">CJK / Jepang</option>
+                </select>
+                <small>Huruf otomatis menyesuaikan balon</small>
+              </label>
+            </div>
+
+            <details class="advanced" id="advanced">
+              <summary>Pengaturan lanjutan <span>opsional</span></summary>
+              <div class="advanced-grid">
+                <label class="field">
+                  <span>Ukuran huruf <output id="scaleOut">100%</output></span>
+                  <input type="range" id="fontScale" min="70" max="140" step="5" value="100">
+                </label>
+                <label class="field">
+                  <span>Warna teks</span>
+                  <select id="textColor">
+                    <option value="auto">Otomatis</option>
+                    <option value="black">Hitam</option>
+                    <option value="white">Putih</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Gaya bahasa</span>
+                  <select id="tone">
+                    <option value="santai">Santai (manga)</option>
+                    <option value="netral">Netral</option>
+                    <option value="baku">Baku</option>
+                  </select>
+                  <small>Santai memakai bahasa sehari-hari, bukan baku</small>
+                </label>
+                <label class="field">
+                  <span>Sensitivitas OCR <output id="scoreOut">0.50</output></span>
+                  <input type="range" id="minScore" min="30" max="80" step="5" value="50">
+                </label>
+                <label class="toggle-field">
+                  <input type="checkbox" id="outlineText">
+                  <span class="toggle"></span>
+                  <span>Garis tepi huruf</span>
+                </label>
+                <label class="toggle-field">
+                  <input type="checkbox" id="fallbackLocal" checked>
+                  <span class="toggle"></span>
+                  <span>Fallback otomatis: Google → MyMemory → lokal (NLLB untuk CJK jika tersedia)</span>
+                </label>
+              </div>
+            </details>
+
+            <div class="upload-actions">
+              <button type="submit" class="btn btn-primary btn-xl" id="translateBtn">
+                <span class="btn-label">Terjemahkan sekarang</span>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+              </button>
+              <button type="button" class="btn btn-paper btn-xl" id="sampleBtn">Coba halaman contoh</button>
+              <p class="privacy-note">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                File gambar tidak dikirim ke layanan pihak ketiga. Teks hanya dikirim ke mesin online jika kamu memilihnya.
+              </p>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="feature-band wrap" aria-label="Keunggulan">
+        <div class="feature-cell">
+          <span class="feature-num">01</span>
+          <h3>Deteksi balon</h3>
+          <p>OCR menemukan teks, menggabungkan baris, dan mengenali kolom vertikal Jepang.</p>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-num">02</span>
+          <h3>Redraw bersih</h3>
+          <p>Huruf lama dihapus tanpa merusak garis balon atau artwork di sekitarnya.</p>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-num">03</span>
+          <h3>Tanpa limit</h3>
+          <p>Model terjemahan lokal. Setelah terunduh, tidak ada kredit atau kuota yang habis.</p>
+        </div>
+        <div class="feature-cell">
+          <span class="feature-num">04</span>
+          <h3>Editor hasil</h3>
+          <p>Perbaiki satu dialog, ganti gaya huruf, lalu render ulang seketika.</p>
+        </div>
+      </section>
+
+      <section class="how wrap" id="cara-kerja">
+        <div class="section-head">
+          <div>
+            <div class="kicker">02 — CARA KERJA</div>
+            <h2>Tiga langkah, satu halaman.</h2>
+          </div>
+          <p>Pipeline yang sama dipakai untuk satu gambar maupun satu chapter penuh.</p>
+        </div>
+        <div class="steps">
+          <article class="step">
+            <div class="step-top"><span>01</span><div class="step-line"></div></div>
+            <div class="step-icon">
+              <svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M7 37V12a3 3 0 0 1 3-3h28a3 3 0 0 1 3 3v25"/><path d="M7 37h34M15 17h18M15 24h13M15 31h9"/></svg>
+            </div>
+            <h3>Deteksi &amp; baca</h3>
+            <p>Model OCR membaca dialog horizontal dan vertikal, lalu mengelompokkannya per balon.</p>
+          </article>
+          <article class="step">
+            <div class="step-top"><span>02</span><div class="step-line"></div></div>
+            <div class="step-icon">
+              <svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 17h30M9 31h30"/><path d="M18 11l-5 6 5 6M30 25l5 6-5 6"/></svg>
+            </div>
+            <h3>Terjemahkan</h3>
+            <p>Mesin lokal menerjemahkan langsung di CPU. Pilih Google, Ollama, atau API sendiri bila mau.</p>
+          </article>
+          <article class="step">
+            <div class="step-top"><span>03</span><div class="step-line"></div></div>
+            <div class="step-icon">
+              <svg viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 38L38 10M14 10h24v24"/><path d="M10 24v14h14"/></svg>
+            </div>
+            <h3>Redraw &amp; rapikan</h3>
+            <p>Huruf lama dibersihkan, terjemahan ditata otomatis agar pas di dalam balon.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="showcase wrap" id="fitur">
+        <div class="showcase-copy">
+          <div class="kicker">03 — FITUR</div>
+          <h2>Dibuat untuk pembaca,<br>bukan untuk langganan.</h2>
+          <p>
+            Semua fitur inti terbuka dan berjalan di mesinmu. Tidak ada watermark,
+            tidak ada batas halaman, tidak ada tagihan per gambar.
+          </p>
+          <ul class="tick-list">
+            <li>Batch upload hingga 300 halaman dan arsip <b>CBZ/ZIP</b></li>
+            <li>Deteksi bahasa otomatis: Inggris, Jepang, Korea, Tionghoa</li>
+            <li>Editor dialog per balon + render ulang instan</li>
+            <li>Perbandingan sebelum/sesudah dengan slider</li>
+            <li>Unduh per halaman atau satu chapter dalam ZIP</li>
+            <li>Model dapat diganti: Argos/OPUS, NLLB-200, Google, Ollama, OpenAI-compatible</li>
+          </ul>
+        </div>
+        <div class="showcase-visual">
+          <div class="mini-page">
+            <div class="mini-panel"><span class="mini-bubble">BACA<br>MANGA</span></div>
+            <div class="mini-panel short"><span class="mini-bubble small">TANPA<br>LIMIT</span></div>
+            <div class="mini-caption">100% LOKAL · 0 KREDIT</div>
+          </div>
+          <div class="sticker sticker-a">NO<br>CREDITS</div>
+          <div class="sticker sticker-b">OFFLINE<br>READY</div>
+        </div>
+      </section>
+
+      <section class="models wrap" id="model">
+        <div class="section-head">
+          <div>
+            <div class="kicker">04 — MODEL</div>
+            <h2>Lokal. Bisa dibawa offline.</h2>
+          </div>
+          <p>
+            Model terjemahan diunduh sekali ke folder <code>data/models</code>.
+            Setelah itu seluruh pipeline berjalan tanpa koneksi internet.
+          </p>
+        </div>
+        <div class="model-grid">
+          <div class="model-card accent">
+            <span class="model-tag">DEFAULT</span>
+            <h3>Argos / OPUS</h3>
+            <p>Terjemahan langsung Inggris → Indonesia, cepat di CPU dan sudah terpasang.</p>
+            <div class="model-meta"><span>±70 MB per bahasa</span><span>CPU</span></div>
+          </div>
+          <div class="model-card">
+            <span class="model-tag">LOKAL</span>
+            <h3>NLLB-200</h3>
+            <p>Kualitas lebih baik untuk Jepang, Korea, dan Tionghoa. Satu model untuk 200 bahasa, berjalan di CPU.</p>
+            <div class="model-meta"><span>±623 MB sekali</span><span>CPU</span></div>
+          </div>
+          <div class="model-card">
+            <span class="model-tag">OPSIONAL</span>
+            <h3>Ollama / LLM</h3>
+            <p>Konteks dialog lebih natural. Arahkan ke Ollama atau endpoint OpenAI-compatible milikmu.</p>
+            <div class="model-meta"><span>Model apa pun</span><span>Lokal</span></div>
+          </div>
+          <div class="model-card">
+            <span class="model-tag">ONLINE</span>
+            <h3>Google / MyMemory</h3>
+            <p>Tanpa unduhan, tapi bergantung pada koneksi dan kuota pihak ketiga.</p>
+            <div class="model-meta"><span>Rate-limited</span><span>Online</span></div>
+          </div>
+        </div>
+        <div class="language-strip">
+          <span class="language-title">Bahasa target populer</span>
+          <div class="chips" id="languageChips"></div>
+        </div>
+      </section>
+
+      <section class="faq wrap" id="faq">
+        <div class="section-head">
+          <div>
+            <div class="kicker">05 — FAQ</div>
+            <h2>Pertanyaan yang sering muncul.</h2>
+          </div>
+        </div>
+        <div class="faq-grid">
+          <details>
+            <summary>Apakah benar-benar tanpa limit?</summary>
+            <p>Ya. Mesin lokal tidak memakai kredit atau kuota. Satu-satunya batas fisik adalah RAM/CPU perangkatmu dan ukuran upload yang kami batasi demi stabilitas.</p>
+          </details>
+          <details>
+            <summary>Apakah file saya diunggah ke internet?</summary>
+            <p>Tidak. Server berjalan di <code>127.0.0.1</code> milikmu. Hanya mesin online opsional (Google/MyMemory/Ollama remote) yang mengirim teks keluar, dan itu pun hanya jika kamu memilihnya.</p>
+          </details>
+          <details>
+            <summary>Bahasa apa saja yang didukung?</summary>
+            <p>OCR membaca Inggris, Jepang, Korea, Tionghoa, dan bahasa Latin. Terjemahan mendukung 49 bahasa target lewat Argos/OPUS, atau 200 bahasa lewat NLLB-200 lokal.</p>
+          </details>
+          <details>
+            <summary>Bagaimana dengan teks vertikal Jepang?</summary>
+            <p>Model OCR mengenali kolom vertikal. Pilih mesin <b>NLLB-200</b> atau LLM lokal untuk kualitas Jepang terbaik; model Argos ja→en masih terbatas.</p>
+          </details>
+          <details>
+            <summary>Bisakah mengedit hasil terjemahan?</summary>
+            <p>Bisa. Buka halaman di viewer, ganti teks pada panel kanan, atur gaya huruf, lalu klik <b>Render ulang</b>. Hasil dan unduhan akan diperbarui.</p>
+          </details>
+          <details>
+            <summary>Apakah ini menggantikan scanlator?</summary>
+            <p>Ini alat bantu baca pribadi. Kualitas terjemahan otomatis tidak menggantikan editor manusia, dan kamu tetap bertanggung jawab atas hak cipta karya yang diterjemahkan.</p>
+          </details>
+        </div>
+      </section>
+    </section>
+
+    <!-- ============================== JOB ============================== -->
+    <section id="job-view" class="view hidden">
+      <div class="workspace wrap">
+        <div class="workspace-head">
+          <button class="btn btn-ghost btn-sm" id="jobBack" type="button">← Beranda</button>
+          <div class="workspace-title">
+            <span class="kicker">JOB AKTIF</span>
+            <h1 id="jobTitle">Memproses…</h1>
+          </div>
+          <div class="workspace-actions">
+            <a class="btn btn-primary btn-sm disabled" id="downloadAll" href="#" aria-disabled="true">Unduh ZIP
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4v12M7 11l5 5 5-5M5 21h14"/></svg>
+            </a>
+            <button class="btn btn-ghost btn-sm hidden" id="cancelJob" type="button">Batalkan</button>
+          </div>
+        </div>
+
+        <div class="job-progress-card">
+          <div class="progress-labels">
+            <span id="jobStage">Menyiapkan…</span>
+            <strong id="jobPercent">0%</strong>
+          </div>
+          <div class="progress-track"><i id="jobBar"></i></div>
+          <div class="job-sub">
+            <span id="jobMessage">—</span>
+            <span id="jobCount">0 / 0 halaman</span>
+          </div>
+        </div>
+
+        <div class="job-warnings hidden" id="jobWarnings"></div>
+        <div class="page-grid" id="pageGrid"></div>
+
+        <div class="job-footer">
+          <div class="job-tip">
+            <strong>Tips:</strong> klik halaman yang sudah selesai untuk membuka editor dan membandingkan hasil.
+          </div>
+          <a class="btn btn-paper" id="openFirst" href="#">Buka halaman pertama</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================== VIEWER ============================== -->
+    <section id="viewer-view" class="view hidden">
+      <div class="viewer-shell">
+        <header class="viewer-head">
+          <div class="viewer-head-left">
+            <button class="btn btn-ghost btn-sm" id="viewerBack" type="button">← Job</button>
+            <div>
+              <span class="kicker" id="viewerPageNo">HALAMAN 1</span>
+              <h1 id="viewerTitle">Judul</h1>
+            </div>
+          </div>
+          <div class="viewer-head-actions">
+            <div class="page-switch">
+              <button class="btn btn-ghost btn-sm" id="prevPage" type="button" aria-label="Halaman sebelumnya">←</button>
+              <span id="pageCounter">1 / 1</span>
+              <button class="btn btn-ghost btn-sm" id="nextPage" type="button" aria-label="Halaman berikutnya">→</button>
+            </div>
+            <a class="btn btn-primary btn-sm" id="downloadPage" href="#">Unduh halaman
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 4v12M7 11l5 5 5-5M5 21h14"/></svg>
+            </a>
+          </div>
+        </header>
+
+        <div class="viewer-layout">
+          <aside class="page-rail" id="pageRail" aria-label="Daftar halaman"></aside>
+
+          <main class="reader">
+            <div class="reader-toolbar">
+              <div class="compare-labels">
+                <span class="tag-original">ASLI</span>
+                <span class="tag-result">HASIL</span>
+              </div>
+              <div class="reader-tools">
+                <button class="icon-btn" id="zoomOut" type="button" aria-label="Perkecil">−</button>
+                <span id="zoomLabel">100%</span>
+                <button class="icon-btn" id="zoomIn" type="button" aria-label="Perbesar">+</button>
+                <button class="icon-btn" id="resetZoom" type="button" aria-label="Reset zoom">⤾</button>
+              </div>
+            </div>
+            <div class="reader-scroll" id="readerScroll">
+              <div class="compare-stage" id="compareStage">
+                <div class="compare-canvas" id="compareCanvas">
+                  <img id="originalImg" alt="Halaman asli" draggable="false">
+                  <div class="after-clip" id="afterClip"><img id="translatedImg" alt="Halaman terjemahan" draggable="false"></div>
+                  <div class="region-layer" id="regionLayer"></div>
+                  <div class="compare-divider" id="compareDivider"><span></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="compare-control">
+              <span>ASLI</span>
+              <input type="range" id="compareRange" min="0" max="100" value="50" aria-label="Geser perbandingan">
+              <span>HASIL</span>
+            </div>
+          </main>
+
+          <aside class="editor">
+            <div class="editor-tabs">
+              <button class="editor-tab active" data-tab="text" type="button">Teks</button>
+              <button class="editor-tab" data-tab="style" type="button">Tampilan</button>
+            </div>
+
+            <div class="editor-body" id="tabText">
+              <div class="editor-head">
+                <div>
+                  <h2>Dialog terdeteksi</h2>
+                  <p id="regionSummary">0 balon</p>
+                </div>
+                <button class="btn btn-primary btn-sm" id="rerenderBtn" type="button">Render ulang</button>
+              </div>
+              <div class="region-list" id="regionList"></div>
+            </div>
+
+            <div class="editor-body hidden" id="tabStyle">
+              <div class="editor-head">
+                <div>
+                  <h2>Gaya huruf</h2>
+                  <p>Berlaku untuk halaman ini</p>
+                </div>
+                <button class="btn btn-primary btn-sm" id="rerenderStyleBtn" type="button">Render ulang</button>
+              </div>
+              <label class="field light">
+                <span>Jenis huruf</span>
+                <select id="styleFont">
+                  <option value="comic">Comic (default)</option>
+                  <option value="sans">Sans tebal</option>
+                  <option value="serif">Serif klasik</option>
+                  <option value="cjk">CJK / Jepang</option>
+                </select>
+              </label>
+              <label class="field light">
+                <span>Ukuran <output id="styleScaleOut">100%</output></span>
+                <input type="range" id="styleScale" min="70" max="140" step="5" value="100">
+              </label>
+              <label class="field light">
+                <span>Warna teks</span>
+                <select id="styleColor">
+                  <option value="auto">Otomatis</option>
+                  <option value="black">Hitam</option>
+                  <option value="white">Putih</option>
+                </select>
+              </label>
+              <label class="toggle-field light">
+                <input type="checkbox" id="styleOutline">
+                <span class="toggle"></span>
+                <span>Garis tepi huruf</span>
+              </label>
+              <div class="style-note">
+                Klik <b>Render ulang</b> setelah mengubah gaya. Hasil akan langsung terlihat di viewer dan unduhan.
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner wrap">
+      <div class="footer-brand">
+        <span class="brand-mark small">M</span>
+        <div><strong>MANGAFLOW</strong><span>Penerjemah manga lokal, tanpa limit.</span></div>
+      </div>
+      <div class="footer-links">
+        <a href="#translate">Terjemahkan</a>
+        <a href="#fitur">Fitur</a>
+        <a href="#model">Model</a>
+        <a href="#faq">FAQ</a>
+      </div>
+      <div class="footer-note">
+        Dibuat dengan Python, RapidOCR, Argos/OPUS, NLLB-200, dan CTranslate2.<br>
+        Contoh halaman: <a href="https://www.peppercarrot.com/" target="_blank" rel="noopener">Pepper &amp; Carrot</a> oleh David Revoy (CC BY 4.0).
+      </div>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal hidden" id="historyModal" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="historyTitle">Riwayat job</h2>
+        <button class="icon-btn" id="historyClose" type="button" aria-label="Tutup">×</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal-card settings-card">
+      <div class="modal-head">
+        <h2 id="settingsTitle">Pengaturan mesin</h2>
+        <button class="icon-btn" id="settingsClose" type="button" aria-label="Tutup">×</button>
+      </div>
+      <div class="settings-body" id="settingsBody"></div>
+      <div class="settings-foot">
+        <span class="settings-status" id="settingsStatus">Perubahan langsung aktif setelah disimpan.</span>
+        <div class="settings-actions">
+          <button class="btn btn-ghost btn-sm" id="settingsReload" type="button">Muat ulang</button>
+          <button class="btn btn-primary btn-sm" id="settingsSave" type="button">Simpan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

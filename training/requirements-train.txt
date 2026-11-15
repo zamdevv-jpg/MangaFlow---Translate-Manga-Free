@@ -1,0 +1,10 @@
+torch>=2.2
+requests>=2.31
+transformers>=4.46,<5
+datasets>=2.19
+peft>=0.12
+accelerate>=0.33
+sentencepiece>=0.2
+ctranslate2>=4.4
+huggingface_hub>=0.23
+sacrebleu>=2.4

@@ -1,0 +1,66 @@
+# ============================================================
+# MangaFlow — .gitignore
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtual environment ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Tooling / cache ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.cache/
+
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Runtime aplikasi (job, model, backup, hasil, kunci API) ---
+# Hanya folder data di root proyek; training/data tetap bisa dilacak.
+/data/
+server.log
+server.err
+*.log
+*.pid
+*.part
+
+# --- Dataset & output latihan ---
+/training/data/*
+!/training/data/sample_pairs.jsonl
+/training/out/
+
+# --- Hasil sementara ---
+tmp/
+temp/
+*.tmp
+*.bak
