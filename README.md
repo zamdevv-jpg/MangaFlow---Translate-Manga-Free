@@ -273,6 +273,7 @@ python app.py
 ```text
 manga-translator/
 ├─ .gitignore             # data runtime, model, log, dan kunci API tidak di-commit
+├─ LICENSE                # lisensi MIT untuk kode proyek
 ├─ README.md
 ├─ app.py                 # FastAPI: route API, upload, download, render
 ├─ server/
@@ -405,6 +406,7 @@ Untuk teks Jepang/Korea/Tionghoa, pastikan sumber memakai **Deteksi otomatis** d
 
 ## Privasi & lisensi
 
+- Kode sumber MangaFlow dilisensikan **MIT** — lihat [`LICENSE`](LICENSE).
 - Server hanya mendengarkan `127.0.0.1` secara default. File tidak diunggah ke layanan pihak ketiga kecuali kamu memilih mesin online.
 - Aplikasi ini tidak memiliki autentikasi. Jangan mengekspos port ke internet publik tanpa reverse proxy dan autentikasi tambahan.
 - Model Argos/OPUS, NLLB-200, RapidOCR, dan CTranslate2 memiliki lisensi masing-masing; periksa halaman model sebelum dipakai komersial.
