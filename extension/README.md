@@ -6,15 +6,15 @@ Ekstensi ini **bukan** layanan cloud: tidak ada akun, kredit, langganan, atau un
 
 ## Fitur
 
-- **Terjemahkan halaman** — mendeteksi gambar manga terbesar di tab aktif, mengirimnya ke server lokal, lalu mengganti gambar asli dengan hasil terjemahan.
-- **Auto translate page** — jika diaktifkan, halaman manga diproses otomatis saat dibuka. Halaman yang sama tidak diproses dua kali dalam satu sesi tab.
+- **Terjemahkan halaman** — mendeteksi semua gambar manga di tab aktif, mengirimnya dalam satu job batch ke server lokal, lalu mengganti setiap gambar asli dengan hasil terjemahannya. Satu batch maksimal 40 gambar dan 450 MB.
+- **Terjemahkan otomatis** — jika diaktifkan, semua gambar manga yang sudah termuat di halaman diproses otomatis saat dibuka. Halaman yang sama tidak diproses dua kali dalam satu sesi tab.
 - **Screenshot** — tangkap area layar yang terlihat, pilih crop, lalu terjemahkan. Berguna untuk gambar yang dilindungi CSP, canvas, atau halaman tanpa gambar manga yang jelas.
 - **Pemilih bahasa target** — bahasa diambil dari `/api/config` server, jadi daftar dan ketersediaan mesin selalu mengikuti server.
 - **Status server lokal** — kartu utama menampilkan status server, mesin, bahasa target, dan versi. Tidak ada penghitung kredit karena MangaFlow tidak memakai kredit.
 - **Shortcut** — `Ctrl+Shift+S` di Windows/Linux atau `Command+Shift+S` di macOS untuk menangkap layar dan membuka popup.
 - **Viewer hasil** — slider sebelum/sesudah, daftar halaman, unduhan PNG, dan tautan ke editor MangaFlow.
 - **Pemulihan** — panel di halaman bisa mengembalikan gambar asli atau membuka hasil di viewer/editor.
-- **Pengaturan tersimpan** — alamat server, mesin, bahasa, gaya bahasa, dan auto translate disimpan di `chrome.storage.sync`.
+- **Pengaturan tersimpan** — alamat server, mesin, bahasa, gaya bahasa, dan terjemahkan otomatis disimpan di `chrome.storage.sync`.
 
 ## Persyaratan
 
@@ -54,19 +54,24 @@ Buka `chrome://extensions`, klik ikon refresh pada kartu MangaFlow, lalu muat ul
 ### Terjemahkan halaman
 
 1. Buka halaman manga/manhwa/webtoon di tab biasa.
-2. Klik ikon MangaFlow di toolbar.
-3. Pastikan kartu status bertuliskan **Server lokal aktif** dan hint menyebut ukuran gambar yang terdeteksi.
-4. Klik **Terjemahkan halaman**.
-5. Tunggu progres selesai. Gambar di halaman diganti dengan hasil terjemahan, dan panel MangaFlow muncul di pojok kanan bawah.
-6. Dari panel, buka **Editor** untuk memperbaiki dialog, **Unduh** hasil, atau **Kembalikan asli**.
+2. Gulir sampai gambar yang ingin diterjemahkan sudah termuat. Ekstensi hanya memproses gambar yang sudah ada di DOM.
+3. Klik ikon MangaFlow di toolbar.
+4. Pastikan kartu status bertuliskan **Server lokal aktif** dan hint menyebut jumlah gambar yang terdeteksi. Tombol berubah menjadi **Terjemahkan N gambar** bila ada lebih dari satu gambar.
+5. Klik tombol tersebut. Ekstensi mengunggah semua gambar sekaligus dalam satu job batch (maksimal 40 gambar atau 450 MB per batch).
+6. Tunggu progres selesai. Setiap gambar di halaman diganti dengan hasil terjemahannya, dan panel MangaFlow muncul di pojok kanan bawah.
+7. Dari panel, buka **Editor** untuk memperbaiki dialog, **Unduh** hasil, atau **Pulihkan semua**.
+
+Job batch memakai urutan unggah untuk memetakan halaman hasil kembali ke gambar asli. Jika sebagian gambar gagal, panel menampilkan jumlah yang gagal dan kamu bisa menjalankan terjemahan lagi untuk sisanya.
 
 Jika tidak ada gambar yang terdeteksi, gunakan **Screenshot**. Halaman dengan gambar canvas, background-image, atau perlindungan CSP memang tidak bisa dideteksi sebagai `<img>`.
 
-### Auto translate
+### Terjemahkan otomatis
 
-Aktifkan **Auto translate page** di popup. Setiap tab manga yang dibuka akan diproses otomatis setelah gambar tersedia. Pengaturan ini juga bisa diubah dari tab **Pengaturan**.
+Aktifkan **Terjemahkan otomatis** di popup. Setiap tab manga yang dibuka akan diproses otomatis setelah gambar tersedia, termasuk semua gambar yang sudah termuat (bukan hanya satu gambar terbesar). Pengaturan ini juga bisa diubah dari tab **Pengaturan**.
 
-Auto translate hanya berjalan pada halaman `http(s)` biasa, bukan halaman `chrome://`, `chrome-extension://`, atau halaman server MangaFlow sendiri. Halaman yang sama tidak diproses berulang kali dalam satu sesi tab; muat ulang halaman atau gunakan **Terjemahkan ulang** di panel untuk memaksa proses baru.
+Terjemahkan otomatis hanya berjalan pada halaman `http(s)` biasa, bukan halaman `chrome://`, `chrome-extension://`, atau halaman server MangaFlow sendiri. Halaman yang sama tidak diproses berulang kali dalam satu sesi tab; muat ulang halaman atau gunakan **Terjemahkan ulang** di panel untuk memaksa proses baru.
+
+Gambar yang baru dimuat setelah batch pertama (pemuatan lambat saat menggulir) tidak ikut batch tersebut. Setelah gambar baru muncul, klik **Terjemahkan N gambar** lagi untuk memproses sisanya. Terjemahkan otomatis hanya memindai sekali per sesi tab; untuk melanjutkan sisa gambar, gunakan tombol manual.
 
 ### Screenshot
 
@@ -102,7 +107,7 @@ Viewer memuat data langsung dari `/api/jobs/{id}`. Jika server dimatikan, viewer
 | **Gaya bahasa** | Santai, Netral, atau Baku (berlaku untuk target Indonesia). |
 | **Bahasa sumber** | Deteksi otomatis atau bahasa tertentu. |
 | **Bahasa target** | Diambil dari `/api/config`; pilihan ini juga muncul di kartu **Terjemahkan ke** pada Beranda. |
-| **Auto translate page** | Proses otomatis saat halaman manga dibuka. |
+| **Terjemahkan otomatis** | Proses otomatis semua gambar yang termuat saat halaman manga dibuka. |
 
 Kunci API DeepL, Gemini, Microsoft, dan pengaturan Ollama/OpenAI **tidak disimpan di ekstensi**. Isi kunci tersebut di halaman MangaFlow → **Pengaturan mesin & kunci API**; server yang menyimpannya di `data/settings.json`.
 
@@ -129,9 +134,11 @@ Ekstensi **tidak** menyisipkan iklan, tidak mengirim telemetri, dan tidak menghu
 ## Batasan yang diketahui
 
 - Hanya mendeteksi `<img>` dengan ukuran minimal 280×280 dan tampilan minimal 220×220. Gambar di dalam `canvas`, `background-image`, iframe lintas-origin, atau shadow DOM tertutup tidak terdeteksi; gunakan Screenshot.
+- Satu batch dibatasi 40 gambar dan total 450 MB. Jika halaman punya lebih banyak gambar, jalankan lagi setelah batch pertama selesai; gambar yang sudah diterjemahkan dilewati otomatis.
+- Hanya gambar yang sudah termuat di DOM yang ikut diproses. Gambar lazy-load di bawah lipatan baru masuk setelah kamu menggulir dan menjalankan terjemahan lagi.
 - Situs dengan CSP ketat bisa memblokir gambar hasil dari `localhost`. Ekstensi mencoba memuat ulang sebagai data URL; jika tetap gagal, buka hasil di viewer.
 - Beberapa situs memblokir pengambilan gambar lewat `Referer`/hotlink. Jika server membalas error, buka gambar di tab baru atau gunakan Screenshot.
-- Auto translate memproses satu gambar terbesar per halaman, bukan semua panel satu per satu. Untuk chapter panjang, gunakan upload batch/ZIP di MangaFlow.
+- Terjemahkan otomatis memproses semua gambar yang sudah termuat saat pemindaian. Untuk chapter sangat panjang atau gambar yang dimuat lambat, gulir lalu jalankan lagi; untuk arsip besar, upload batch/ZIP di MangaFlow.
 - Terjemahan otomatis bisa salah pada nama diri, SFX, atau teks kecil. Periksa hasil di editor sebelum dipublikasikan.
 - Screenshot hanya menangkap area yang terlihat dan tidak menyertakan kursor atau elemen browser.
 - Shortcut `Ctrl+Shift+S` bisa bentrok dengan ekstensi lain; ubah di `chrome://extensions/shortcuts`.
@@ -157,8 +164,8 @@ Situs mungkin memblokir gambar hasil lewat CSP. Buka panel MangaFlow di halaman,
 **Shortcut tidak bekerja**  
 Buka `chrome://extensions/shortcuts`, cari MangaFlow, dan tetapkan kombinasi lain. Chrome versi lama tidak mengizinkan `chrome.action.openPopup`; popup akan dibuka sebagai jendela kecil.
 
-**Auto translate tidak berjalan**  
-Pastikan toggle aktif di popup dan halaman memuat gambar setelah content script siap. Untuk halaman yang memuat gambar secara lambat, tunggu beberapa detik atau klik **Terjemahkan halaman** manual.
+**Terjemahkan otomatis tidak berjalan atau hanya sebagian gambar**  
+Pastikan toggle aktif di popup dan halaman memuat gambar setelah content script siap. Terjemahkan otomatis hanya memindai sekali per sesi tab dan hanya memproses gambar yang sudah termuat. Gulir halaman, lalu klik **Terjemahkan N gambar** untuk memproses gambar yang dimuat lambat atau sisa batch.
 
 **Ukuran popup terpotong**  
 Popup dirancang untuk lebar 320 px dan tinggi 584 px. Jika tampilan browser memakai zoom besar, perkecil zoom atau buka pengaturan lewat tab.

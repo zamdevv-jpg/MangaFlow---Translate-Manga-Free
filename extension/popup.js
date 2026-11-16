@@ -6,6 +6,7 @@ const DEFAULT_SERVER = "http://127.0.0.1:8765";
 const SETTINGS_KEY = "mf_settings";
 const LAST_JOB_KEY = "mf_last_job";
 const PENDING_SHOT_KEY = "mf_pending_shot";
+const MAX_BATCH = 40;
 const REPO = "https://github.com/zamdevv-jpg/MangaFlow---Translate-Manga-Free";
 const UPDATES_URL = `${REPO}/commits/main`;
 const ISSUES_URL = `${REPO}/issues`;
@@ -100,9 +101,13 @@ const state = {
   pageState: "checking",
   pageError: "",
   candidate: null,
+  candidateCount: 0,
+  untranslatedCount: 0,
+  batchCount: 0,
   pageBusy: false,
   pageProgress: 0,
   pageStage: "",
+  pageCount: 0,
   pageTimer: 0,
   lastJob: null,
   shot: null,
@@ -371,7 +376,7 @@ function updateTranslateButton() {
   const ready =
     state.serverOnline &&
     state.pageState === "ready" &&
-    Boolean(state.candidate) &&
+    state.candidateCount > 0 &&
     !state.pageBusy;
   btn.disabled = !ready;
   btn.classList.toggle("is-busy", state.pageBusy);
@@ -379,7 +384,11 @@ function updateTranslateButton() {
     label.textContent = state.pageProgress
       ? `Menerjemahkan ${Math.min(99, state.pageProgress)}%`
       : "Menerjemahkan…";
-  } else if (state.candidate?.translated) {
+  } else if (state.batchCount > 1) {
+    label.textContent = `Terjemahkan ${state.batchCount} gambar`;
+  } else if (state.untranslatedCount === 1) {
+    label.textContent = "Terjemahkan halaman";
+  } else if (state.untranslatedCount === 0) {
     label.textContent = "Lihat hasil";
   } else {
     label.textContent = "Terjemahkan halaman";
@@ -398,9 +407,10 @@ function renderPageHint() {
   let type = "";
 
   if (state.pageBusy) {
+    const count = state.pageCount > 1 ? `${state.pageCount} gambar` : "halaman";
     text = state.pageStage
-      ? `Menerjemahkan · ${state.pageStage}`
-      : "Menerjemahkan halaman…";
+      ? `Menerjemahkan ${count} · ${state.pageStage}`
+      : `Menerjemahkan ${count}…`;
   } else if (!state.serverOnline) {
     text = state.serverError
       ? state.serverError
@@ -414,9 +424,23 @@ function renderPageHint() {
     text = state.pageError || "Halaman tidak bisa dipindai. Muat ulang lalu coba lagi.";
     type = "is-error";
   } else if (state.pageState === "none") {
-    text = "Tidak ada gambar manga besar. Coba Screenshot.";
+    text = "Tidak ada gambar manga besar. Scroll dulu atau coba Screenshot.";
   } else if (state.pageState === "checking") {
     text = "Memeriksa halaman aktif…";
+  } else if (state.untranslatedCount > 1) {
+    text =
+      state.untranslatedCount > state.batchCount
+        ? `${state.untranslatedCount} gambar terdeteksi. ${state.batchCount} diproses per batch.`
+        : `${state.untranslatedCount} gambar manga siap diterjemahkan sekaligus.`;
+    type = "is-ok";
+  } else if (state.untranslatedCount === 1) {
+    text = state.candidate
+      ? `Gambar ${state.candidate.width}×${state.candidate.height} siap diterjemahkan.`
+      : "Satu gambar manga siap diterjemahkan.";
+    type = "is-ok";
+  } else if (state.candidateCount > 1) {
+    text = `${state.candidateCount} gambar sudah diterjemahkan. Buka editor untuk koreksi.`;
+    type = "is-ok";
   } else if (state.candidate?.translated) {
     text = "Halaman ini sudah diterjemahkan. Buka editor untuk koreksi.";
     type = "is-ok";
@@ -541,6 +565,9 @@ async function detectPage() {
     state.tab = { title: "Halaman manga contoh", url: "https://contoh.test/manga/1" };
     state.pageState = "ready";
     state.candidate = { width: 1351, height: 1920, translated: false };
+    state.candidateCount = 3;
+    state.untranslatedCount = 3;
+    state.batchCount = 3;
     state.pageError = "";
     renderStatus();
     return;
@@ -549,6 +576,9 @@ async function detectPage() {
   if (!IS_EXT) return;
   state.pageState = "checking";
   state.candidate = null;
+  state.candidateCount = 0;
+  state.untranslatedCount = 0;
+  state.batchCount = 0;
   state.pageError = "";
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -568,7 +598,10 @@ async function detectPage() {
       const response = await chrome.tabs.sendMessage(tab.id, { type: "mf:detect" });
       if (!response?.ok) throw new Error(response?.error || "Halaman tidak merespons.");
       state.candidate = response.candidate || null;
-      state.pageState = state.candidate ? "ready" : "none";
+      state.candidateCount = Math.max(0, Number(response.candidateCount) || 0);
+      state.untranslatedCount = Math.max(0, Number(response.untranslatedCount) || 0);
+      state.batchCount = Math.max(0, Number(response.batchCount) || 0);
+      state.pageState = state.candidateCount ? "ready" : "none";
     } catch {
       state.pageState = "error";
       state.pageError = "Muat ulang halaman ini sekali agar ekstensi bisa memindai gambar.";
@@ -596,13 +629,14 @@ async function translatePage() {
     toast("Server MangaFlow belum aktif.", "error");
     return;
   }
-  if (!state.candidate || !state.tab) {
+  if (!state.candidateCount || !state.tab) {
     toast("Tidak ada gambar manga di tab ini.", "error");
     return;
   }
   state.pageBusy = true;
   state.pageProgress = 0;
   state.pageStage = "Menyiapkan";
+  state.pageCount = state.batchCount;
   renderStatus();
   clearPageTimer();
   state.pageTimer = setTimeout(() => {
@@ -619,13 +653,20 @@ async function translatePage() {
     if (response.alreadyTranslated) {
       clearPageTimer();
       state.pageBusy = false;
+      state.pageCount = 0;
       renderStatus();
-      toast("Halaman ini sudah diterjemahkan. Panel MangaFlow dibuka di halaman.", "ok");
+      toast(
+        response.count > 1
+          ? `${response.count} gambar sudah diterjemahkan. Panel MangaFlow dibuka di halaman.`
+          : "Halaman ini sudah diterjemahkan. Panel MangaFlow dibuka di halaman.",
+        "ok"
+      );
     }
   } catch (error) {
     clearPageTimer();
     state.pageBusy = false;
     state.pageStage = "";
+    state.pageCount = 0;
     renderStatus();
     toast(error.message || "Gagal memulai terjemahan.", "error");
   }
@@ -639,18 +680,35 @@ function handlePageProgress(message, sender) {
     state.pageBusy = true;
     state.pageProgress = Number(message.progress) || 0;
     state.pageStage = message.detail || "OCR & terjemahan";
+    state.pageCount = Math.max(0, Number(message.count) || state.batchCount || 0);
     renderStatus();
     return;
   }
   if (message.state === "done") {
     clearPageTimer();
+    const applied = Math.max(1, Number(message.count) || 1);
+    const failed = Math.max(0, Number(message.failed) || 0);
+    const remaining = Math.max(0, Number(message.remaining) || 0);
     state.pageBusy = false;
     state.pageProgress = 100;
     state.pageStage = "";
-    if (state.candidate) state.candidate.translated = true;
+    state.pageCount = 0;
+    state.untranslatedCount = remaining;
+    state.batchCount = Math.min(remaining, MAX_BATCH);
+    state.candidateCount = Math.max(state.candidateCount, applied + remaining);
+    if (state.candidate) state.candidate.translated = remaining === 0;
     state.pageState = "ready";
     renderStatus();
-    toast("Halaman selesai diterjemahkan.", "ok");
+    if (failed > 0) {
+      toast(
+        `${applied} gambar selesai, ${failed} gagal diproses. Coba lagi untuk sisanya.`,
+        "error"
+      );
+    } else if (applied > 1) {
+      toast(`${applied} gambar selesai diterjemahkan.`, "ok");
+    } else {
+      toast("Halaman selesai diterjemahkan.", "ok");
+    }
     setTimeout(loadLastJob, 700);
     return;
   }
@@ -658,6 +716,7 @@ function handlePageProgress(message, sender) {
     clearPageTimer();
     state.pageBusy = false;
     state.pageStage = "";
+    state.pageCount = 0;
     renderStatus();
     toast(message.error || "Terjemahan halaman gagal.", "error");
   }

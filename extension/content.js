@@ -1,7 +1,7 @@
 /* ============================================================
    MangaFlow — content script
-   Mendeteksi gambar manga terbesar di halaman, menerjemahkannya
-   lewat background service worker, lalu mengganti gambar asli.
+   Mendeteksi gambar manga di halaman, menerjemahkan semuanya
+   lewat satu job batch bila memungkinkan, lalu mengganti gambar asli.
    ============================================================ */
 
 (() => {
@@ -18,6 +18,8 @@
   const AUTO_PREFIX = "mf:auto:";
   const TERMINAL_ERROR = new Set(["error", "cancelled"]);
   const MAX_POLLS = 600;
+  const MAX_BATCH_IMAGES = 40;
+  const BATCH_SCORE_RATIO = 0.07;
 
   let host = null;
   let shadow = null;
@@ -28,6 +30,7 @@
   let uiState = "idle";
   let autoObserver = null;
   let observerTimer = null;
+  let autoScanTimer = null;
   let lastHref = location.href;
   let urlTimer = null;
 
@@ -125,10 +128,11 @@
     return score;
   }
 
-  function findCandidate({ portraitOnly = false } = {}) {
+  function findCandidate({ portraitOnly = false, untranslatedOnly = false } = {}) {
     let best = null;
     let bestScore = 0;
     for (const img of document.images) {
+      if (untranslatedOnly && img.dataset.mfTranslated === "1") continue;
       const score = candidateScore(img);
       if (score <= bestScore) continue;
       if (portraitOnly) {
@@ -139,6 +143,40 @@
       bestScore = score;
     }
     return best;
+  }
+
+  function findCandidates({
+    portraitOnly = false,
+    includeTranslated = true,
+    limit = MAX_BATCH_IMAGES,
+  } = {}) {
+    const rows = [];
+    let bestScore = 0;
+    Array.from(document.images).forEach((img, index) => {
+      if (!includeTranslated && img.dataset.mfTranslated === "1") return;
+      const score = candidateScore(img);
+      if (score <= 0) return;
+      if (portraitOnly) {
+        if (img.naturalWidth < 480) return;
+        if (img.naturalHeight / img.naturalWidth < 1.12) return;
+      }
+      rows.push({ img, score, index });
+      if (score > bestScore) bestScore = score;
+    });
+
+    if (!rows.length) return [];
+    const floor = bestScore * BATCH_SCORE_RATIO;
+    return rows
+      .filter((row) => row.score >= floor)
+      .sort((a, b) => a.index - b.index)
+      .slice(0, limit)
+      .map((row) => row.img);
+  }
+
+  function translatedImages() {
+    return Array.from(document.images).filter(
+      (img) => img.dataset.mfTranslated === "1"
+    );
   }
 
   function preload(url, timeout = 15000) {
@@ -314,37 +352,50 @@
     }
   }
 
-  function showWorking(progress, stage) {
+  function showWorking(progress, stage, count = 0) {
     ensureUI();
     uiState = "working";
     panel.hidden = false;
     badge.hidden = false;
     badge.dataset.state = "working";
-    shadow.getElementById("title").textContent = "Menerjemahkan halaman";
+    shadow.getElementById("title").textContent =
+      count > 1 ? `Menerjemahkan ${count} gambar` : "Menerjemahkan halaman";
     shadow.getElementById("spinner").hidden = false;
     shadow.getElementById("okIcon").hidden = true;
     shadow.getElementById("errIcon").hidden = true;
     shadow.getElementById("message").textContent =
-      "OCR, terjemahan, dan redraw berjalan di server lokal.";
+      count > 1
+        ? "OCR, terjemahan, dan redraw berjalan untuk semua gambar di server lokal."
+        : "OCR, terjemahan, dan redraw berjalan di server lokal.";
     shadow.getElementById("stage").textContent = stage || "";
     shadow.getElementById("barWrap").hidden = false;
     shadow.getElementById("bar").style.width = `${Math.max(3, Math.min(96, progress || 0))}%`;
     setActions([]);
   }
 
-  function showSuccess(job, auto = false) {
+  function showSuccess(job, auto = false, options = {}) {
     ensureUI();
+    const count = Math.max(1, Number(options.count) || 1);
+    const failed = Math.max(0, Number(options.failed) || 0);
     uiState = "done";
     panel.hidden = false;
     badge.hidden = false;
     badge.dataset.state = "done";
-    shadow.getElementById("title").textContent = "Halaman diterjemahkan";
+    shadow.getElementById("title").textContent =
+      count > 1 ? `${count} gambar diterjemahkan` : "Halaman diterjemahkan";
     shadow.getElementById("spinner").hidden = true;
     shadow.getElementById("okIcon").hidden = false;
     shadow.getElementById("errIcon").hidden = true;
-    shadow.getElementById("message").textContent = auto
-      ? "Gambar manga otomatis diterjemahkan. Periksa hasilnya sebelum membaca."
-      : "Gambar di halaman sudah diganti dengan versi terjemahan.";
+    shadow.getElementById("message").textContent =
+      failed > 0
+        ? `${failed} gambar gagal diproses. Periksa panel halaman atau coba lagi.`
+        : count > 1
+          ? auto
+            ? "Semua gambar manga otomatis diterjemahkan. Periksa hasilnya sebelum membaca."
+            : "Semua gambar manga di halaman sudah diganti dengan versi terjemahan."
+          : auto
+            ? "Gambar manga otomatis diterjemahkan. Periksa hasilnya sebelum membaca."
+            : "Gambar di halaman sudah diganti dengan versi terjemahan.";
     shadow.getElementById("stage").textContent = "";
     shadow.getElementById("barWrap").hidden = true;
     setActions([
@@ -356,11 +407,22 @@
         },
       },
       {
-        label: "Pulihkan asli",
+        label: count > 1 ? "Pulihkan semua" : "Pulihkan asli",
         onClick: () => {
-          if (currentImg) restoreImage(currentImg);
+          const targets =
+            Array.isArray(options.restoreImages) && options.restoreImages.length
+              ? options.restoreImages
+              : translatedImages();
+          const restored = targets.filter(
+            (img) => img.dataset.mfTranslated === "1"
+          );
+          if (restored.length) restored.forEach(restoreImage);
+          else if (currentImg) restoreImage(currentImg);
           hidePanel();
-          showBadgeNotice("Gambar asli dipulihkan.", "done");
+          showBadgeNotice(
+            count > 1 ? "Semua gambar asli dipulihkan." : "Gambar asli dipulihkan.",
+            "done"
+          );
         },
       },
     ]);
@@ -384,7 +446,12 @@
         label: "Coba lagi",
         kind: "primary",
         onClick: () => {
-          if (currentImg) {
+          const pending = findCandidates({ includeTranslated: false });
+          if (pending.length > 1) {
+            translateBatch(pending, { auto: true }).catch(() => {});
+          } else if (pending.length === 1) {
+            translateImage(pending[0], { auto: true }).catch(() => {});
+          } else if (currentImg) {
             delete currentImg.dataset.mfTranslated;
             translateImage(currentImg, { auto: true }).catch(() => {});
           }
@@ -560,6 +627,228 @@
     throw new Error("Terjemahan terlalu lama. Periksa server MangaFlow.");
   }
 
+  async function beginBatchJob(images) {
+    const settings = await loadSettings();
+    const payload = {
+      title: document.title || "Halaman manga",
+      pageUrl: location.href,
+      settings,
+      server: settings.serverUrl,
+      items: [],
+    };
+
+    for (let i = 0; i < images.length; i += 1) {
+      const src = imageUrl(images[i]);
+      if (!src) continue;
+      if (/^(blob:|data:)/i.test(src)) {
+        const blob = await (await fetch(src)).blob();
+        payload.items.push({
+          dataUrl: await blobToDataUrl(blob),
+          filename: `halaman-${i + 1}.png`,
+        });
+      } else if (/^https?:/i.test(src)) {
+        payload.items.push({ srcUrl: src });
+      }
+    }
+
+    if (!payload.items.length) {
+      throw new Error("Tidak ada gambar yang bisa diunggah.");
+    }
+
+    const started = await bg({ type: "mf:startJob", payload });
+    currentJob = {
+      id: started.jobId,
+      pageId: started.pages?.[0]?.id || started.pageId,
+      server: started.server,
+    };
+    return started;
+  }
+
+  async function waitForBatchJob(started, onProgress) {
+    let lastStage = "";
+    for (let i = 0; i < MAX_POLLS; i += 1) {
+      await sleep(i === 0 ? 900 : 1500);
+      const response = await bg({
+        type: "mf:jobStatus",
+        payload: {
+          jobId: started.jobId,
+          pageId: started.pageId,
+          server: started.server,
+        },
+      });
+      const job = response.job;
+      const pages = Array.isArray(job.pages) ? job.pages : [];
+      if (job.stage && job.stage !== lastStage) lastStage = job.stage;
+      const progress = Number(job.progress) || 0;
+      if (onProgress) {
+        onProgress(Math.max(8, Math.min(96, progress)), lastStage, job);
+      }
+
+      const terminal =
+        pages.length > 0 &&
+        pages.every((page) =>
+          ["done", "error", "cancelled"].includes(page.status)
+        );
+      if (terminal) {
+        if (pages.some((page) => page.status === "done" && page.translatedUrl)) {
+          return job;
+        }
+        throw new Error(job.error || "Semua gambar gagal diterjemahkan.");
+      }
+
+      if (TERMINAL_ERROR.has(job.status)) {
+        if (pages.some((page) => page.status === "done" && page.translatedUrl)) {
+          return job;
+        }
+        throw new Error(job.error || "Server menghentikan job terjemahan.");
+      }
+
+      if (job.status === "done" && !pages.length) {
+        throw new Error("Hasil batch tidak tersedia.");
+      }
+    }
+    throw new Error("Terjemahan terlalu lama. Periksa server MangaFlow.");
+  }
+
+  async function translateBatch(images, { auto = false } = {}) {
+    const batch = images.slice(0, MAX_BATCH_IMAGES);
+    if (!batch.length) return null;
+    if (batch.length === 1) return translateImage(batch[0], { auto });
+
+    const total = batch.length;
+    batch.forEach((img) => {
+      img.dataset.mfBusy = "1";
+    });
+    currentImg = batch[0];
+    showWorking(3, `Menyiapkan ${total} gambar…`, total);
+    report("working", {
+      progress: 3,
+      detail: `Menyiapkan ${total} gambar`,
+      count: total,
+    });
+
+    try {
+      const started = await beginBatchJob(batch);
+      showWorking(8, `Mengunggah ${total} gambar…`, total);
+      report("working", {
+        progress: 8,
+        detail: `Mengunggah ${total} gambar`,
+        count: total,
+      });
+
+      const job = await waitForBatchJob(started, (progress, stage, current) => {
+        const done = Number(current?.doneCount) || 0;
+        const pageCount = Number(current?.pageCount) || total;
+        const label = stage || `Halaman ${done}/${pageCount}`;
+        showWorking(progress, label, total);
+        report("working", { progress, detail: label, count: total });
+      });
+
+      const pages = Array.isArray(job.pages) ? job.pages : [];
+      const applied = [];
+      const failed = [];
+      for (let i = 0; i < batch.length; i += 1) {
+        const page = pages[i];
+        if (!page?.translatedUrl) {
+          failed.push({
+            img: batch[i],
+            error: new Error("Halaman tidak selesai diproses."),
+          });
+          continue;
+        }
+        try {
+          await applyTranslatedImage(batch[i], {
+            ...job,
+            ...page,
+            id: job.id,
+            pageId: page.id,
+          });
+          applied.push(batch[i]);
+          showWorking(
+            Math.min(96, 90 + Math.round(((i + 1) / total) * 6)),
+            `Memasang hasil ${i + 1}/${total}…`,
+            total
+          );
+        } catch (error) {
+          failed.push({ img: batch[i], error });
+        }
+      }
+
+      if (!applied.length) {
+        throw failed[0]?.error || new Error("Semua gambar gagal diterjemahkan.");
+      }
+
+      const firstPage =
+        pages.find((page) => page.status === "done" && page.translatedUrl) ||
+        pages[0];
+      const successJob = {
+        ...job,
+        ...firstPage,
+        id: job.id,
+        pageId: firstPage?.id,
+      };
+      currentImg = applied[0];
+      currentJob = successJob;
+      const remaining = findCandidates({
+        includeTranslated: false,
+        limit: Infinity,
+      }).length;
+      showSuccess(successJob, auto, {
+        count: applied.length,
+        failed: failed.length,
+        restoreImages: translatedImages(),
+      });
+      report("done", {
+        progress: 100,
+        jobId: job.id,
+        pageId: firstPage?.id,
+        title: job.title,
+        tgt: job.options?.tgt_lang || "",
+        server: job.server,
+        translatedUrl: firstPage?.translatedUrl,
+        thumbUrl: firstPage?.thumbUrl,
+        originalUrl: firstPage?.originalUrl,
+        editorUrl: firstPage?.editorUrl,
+        downloadUrl: firstPage?.downloadUrl,
+        count: applied.length,
+        total,
+        failed: failed.length,
+        remaining,
+      });
+
+      bg({
+        type: "mf:saveLastJob",
+        payload: {
+          job: {
+            jobId: job.id,
+            pageId: firstPage?.id,
+            title: job.title,
+            status: "done",
+            progress: 100,
+            tgt: job.options?.tgt_lang || "",
+            server: job.server,
+            translatedUrl: firstPage?.translatedUrl,
+            thumbUrl: firstPage?.thumbUrl,
+            originalUrl: firstPage?.originalUrl,
+            editorUrl: firstPage?.editorUrl,
+            downloadUrl: firstPage?.downloadUrl,
+            createdAt: Date.now(),
+          },
+        },
+      }).catch(() => {});
+      return job;
+    } catch (error) {
+      const message = error?.message || "Terjemahan gagal.";
+      showError(message);
+      report("error", { error: message });
+      throw error;
+    } finally {
+      batch.forEach((img) => {
+        delete img.dataset.mfBusy;
+      });
+    }
+  }
+
   async function translateImage(img, { auto = false } = {}) {
     if (!img || img.dataset.mfBusy === "1") return null;
     if (img.dataset.mfTranslated === "1") {
@@ -571,7 +860,8 @@
           pageId: img.dataset.mfPage,
           downloadUrl: img.dataset.mfDownload,
         },
-        auto
+        auto,
+        { restoreImages: [img] }
       );
       return { alreadyTranslated: true };
     }
@@ -592,7 +882,11 @@
       });
 
       await applyTranslatedImage(img, { ...job, pageId: job.pageId || started.pageId });
-      showSuccess(job, auto);
+      const remaining = findCandidates({
+        includeTranslated: false,
+        limit: Infinity,
+      }).length;
+      showSuccess(job, auto, { count: 1, restoreImages: [img] });
       report("done", {
         progress: 100,
         jobId: job.id,
@@ -605,6 +899,10 @@
         originalUrl: job.originalUrl,
         editorUrl: job.editorUrl,
         downloadUrl: job.downloadUrl,
+        count: 1,
+        total: 1,
+        failed: 0,
+        remaining,
       });
 
       bg({
@@ -649,19 +947,35 @@
       clearTimeout(observerTimer);
       observerTimer = null;
     }
+    if (autoScanTimer) {
+      clearTimeout(autoScanTimer);
+      autoScanTimer = null;
+    }
+  }
+
+  function startAutoTranslation(images) {
+    if (!images.length) return;
+    const key = `${AUTO_PREFIX}${location.href}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    if (images.length > 1) {
+      translateBatch(images, { auto: true }).catch(() => {});
+    } else {
+      translateImage(images[0], { auto: true }).catch(() => {});
+    }
   }
 
   function watchForImage() {
     if (autoObserver) return;
     autoObserver = new MutationObserver(() => {
-      const img = findCandidate({ portraitOnly: true });
-      if (img) {
+      if (autoScanTimer) clearTimeout(autoScanTimer);
+      autoScanTimer = setTimeout(() => {
+        autoScanTimer = null;
+        const images = findCandidates({ includeTranslated: false });
+        if (!images.length) return;
         stopAutoObserver();
-        const key = `${AUTO_PREFIX}${location.href}`;
-        if (sessionStorage.getItem(key)) return;
-        sessionStorage.setItem(key, "1");
-        translateImage(img, { auto: true }).catch(() => {});
-      }
+        startAutoTranslation(images);
+      }, 700);
     });
     autoObserver.observe(document.documentElement, {
       childList: true,
@@ -683,13 +997,12 @@
     }
     const key = `${AUTO_PREFIX}${location.href}`;
     if (sessionStorage.getItem(key)) return;
-    const img = findCandidate({ portraitOnly: true });
-    if (!img) {
-      watchForImage();
+    const images = findCandidates({ includeTranslated: false });
+    if (!images.length) {
+      if (!findCandidates().length) watchForImage();
       return;
     }
-    sessionStorage.setItem(key, "1");
-    translateImage(img, { auto: true }).catch(() => {});
+    startAutoTranslation(images);
   }
 
   function watchUrlChanges() {
@@ -709,7 +1022,11 @@
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const type = message?.type;
     if (type === "mf:detect") {
-      const img = findCandidate();
+      const all = findCandidates({ limit: Infinity });
+      const pending = findCandidates({ includeTranslated: false, limit: Infinity });
+      const img = pending.length
+        ? findCandidate({ untranslatedOnly: true })
+        : findCandidate();
       sendResponse({
         ok: true,
         pageTitle: document.title,
@@ -721,13 +1038,17 @@
               translated: img.dataset.mfTranslated === "1",
             }
           : null,
+        candidateCount: all.length,
+        untranslatedCount: pending.length,
+        batchCount: Math.min(pending.length, MAX_BATCH_IMAGES),
       });
       return false;
     }
 
     if (type === "mf:translate") {
-      const img = findCandidate();
-      if (!img) {
+      const all = findCandidates({ limit: Infinity });
+      const pending = findCandidates({ includeTranslated: false, limit: Infinity });
+      if (!all.length) {
         sendResponse({
           ok: false,
           error:
@@ -735,22 +1056,30 @@
         });
         return false;
       }
-      if (img.dataset.mfTranslated === "1") {
+      if (!pending.length) {
+        const img = findCandidate();
         currentImg = img;
         showSuccess(
           {
-            editorUrl: img.dataset.mfEditor,
-            id: img.dataset.mfJob,
-            pageId: img.dataset.mfPage,
-            downloadUrl: img.dataset.mfDownload,
+            editorUrl: img?.dataset.mfEditor,
+            id: img?.dataset.mfJob,
+            pageId: img?.dataset.mfPage,
+            downloadUrl: img?.dataset.mfDownload,
           },
-          false
+          false,
+          { count: all.length, restoreImages: translatedImages() }
         );
-        sendResponse({ ok: true, alreadyTranslated: true });
+        sendResponse({ ok: true, alreadyTranslated: true, count: all.length });
         return false;
       }
-      translateImage(img, { auto: false }).catch(() => {});
-      sendResponse({ ok: true, started: true });
+      const batch = pending.slice(0, MAX_BATCH_IMAGES);
+      if (batch.length > 1) {
+        translateBatch(batch, { auto: false }).catch(() => {});
+        sendResponse({ ok: true, started: true, count: batch.length });
+      } else {
+        translateImage(batch[0], { auto: false }).catch(() => {});
+        sendResponse({ ok: true, started: true, count: 1 });
+      }
       return false;
     }
 

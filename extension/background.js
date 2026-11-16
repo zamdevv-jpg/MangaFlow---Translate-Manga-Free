@@ -9,6 +9,8 @@ const SETTINGS_KEY = "mf_settings";
 const LAST_JOB_KEY = "mf_last_job";
 const PENDING_SHOT_KEY = "mf_pending_shot";
 const JOB_RE = /^j_[a-f0-9]{12}$/;
+const MAX_BATCH_ITEMS = 40;
+const MAX_UPLOAD_BYTES = 450 * 1024 * 1024;
 
 const DEFAULT_SETTINGS = {
   serverUrl: DEFAULT_SERVER,
@@ -145,7 +147,11 @@ async function imageBlob(payload) {
 async function startJob(payload = {}) {
   const settings = { ...(await getSettings()), ...(payload.settings || {}) };
   const server = normalizeServer(payload.server || settings.serverUrl);
-  const { blob, filename } = await imageBlob(payload);
+  const items =
+    Array.isArray(payload.items) && payload.items.length ? payload.items : [payload];
+  if (items.length > MAX_BATCH_ITEMS) {
+    throw new Error(`Maksimal ${MAX_BATCH_ITEMS} gambar per terjemahan.`);
+  }
 
   const options = {
     src_lang: payload.srcLang || settings.sourceLang || "auto",
@@ -162,29 +168,61 @@ async function startJob(payload = {}) {
 
   const title = String(payload.title || "Ekstensi MangaFlow").trim().slice(0, 120);
   const form = new FormData();
-  form.append("files", blob, filename);
+  let totalBytes = 0;
+  for (const item of items) {
+    const { blob, filename } = await imageBlob(item);
+    totalBytes += blob.size;
+    if (totalBytes > MAX_UPLOAD_BYTES) {
+      throw new Error("Total gambar terlalu besar untuk satu job. Coba beberapa gambar saja.");
+    }
+    form.append("files", blob, filename);
+  }
   form.append("options", JSON.stringify(options));
   form.append("title", title || "Ekstensi MangaFlow");
 
   const job = await apiJson(server, "/api/jobs", { method: "POST", body: form });
-  const firstPage = Array.isArray(job.pages) && job.pages.length ? job.pages[0] : null;
+  const pages = (Array.isArray(job.pages) ? job.pages : []).map((page) => ({
+    id: page.id,
+    status: page.status,
+  }));
   return {
     ok: true,
     server,
     jobId: job.id,
-    pageId: firstPage?.id || "p001",
+    pageId: pages[0]?.id || "p001",
+    pages,
     job,
   };
 }
 
-function safePage(job, preferredId) {
-  const pages = Array.isArray(job.pages) ? job.pages : [];
-  if (!pages.length) return null;
-  return (
-    pages.find((page) => page.id === preferredId) ||
-    pages.find((page) => page.status === "done") ||
-    pages[0]
-  );
+function pageView(server, jobId, page) {
+  const done = page.status === "done";
+  const version = page.v ? `?v=${encodeURIComponent(page.v)}` : "";
+  return {
+    id: page.id,
+    index: page.index,
+    name: page.name,
+    status: page.status,
+    stage: page.stage,
+    progress: page.progress,
+    error: page.error || null,
+    width: page.width,
+    height: page.height,
+    v: page.v,
+    translatedUrl: done
+      ? `${server}/files/${jobId}/pages/${page.id}/translated.png${version}`
+      : null,
+    originalUrl:
+      page.status !== "queued"
+        ? `${server}/files/${jobId}/pages/${page.id}/original.png${version}`
+        : null,
+    thumbUrl:
+      page.status !== "queued"
+        ? `${server}/files/${jobId}/pages/${page.id}/translated_thumb.jpg${version}`
+        : null,
+    editorUrl: `${server}/#/job/${jobId}/page/${page.id}`,
+    downloadUrl: `${server}/api/jobs/${jobId}/pages/${page.id}/download`,
+  };
 }
 
 async function jobStatus(payload = {}) {
@@ -194,9 +232,14 @@ async function jobStatus(payload = {}) {
   const settings = await getSettings();
   const server = normalizeServer(payload.server || settings.serverUrl);
   const job = await apiJson(server, `/api/jobs/${payload.jobId}`);
-  const page = safePage(job, payload.pageId);
-  const done = page?.status === "done";
-  const version = page?.v ? `?v=${encodeURIComponent(page.v)}` : "";
+  const pages = (Array.isArray(job.pages) ? job.pages : []).map((page) =>
+    pageView(server, job.id, page)
+  );
+  const page =
+    pages.find((row) => row.id === payload.pageId) ||
+    pages.find((row) => row.status === "done") ||
+    pages[0] ||
+    null;
   return {
     ok: true,
     job: {
@@ -213,24 +256,13 @@ async function jobStatus(payload = {}) {
       server,
       pageId: page?.id || null,
       pageStatus: page?.status || null,
-      translatedUrl:
-        done && page
-          ? `${server}/files/${job.id}/pages/${page.id}/translated.png${version}`
-          : null,
-      originalUrl:
-        page && page.status !== "queued"
-          ? `${server}/files/${job.id}/pages/${page.id}/original.png${version}`
-          : null,
-      thumbUrl:
-        page && page.status !== "queued"
-          ? `${server}/files/${job.id}/pages/${page.id}/translated_thumb.jpg${version}`
-          : null,
-      editorUrl: page
-        ? `${server}/#/job/${job.id}/page/${page.id}`
-        : `${server}/#/job/${job.id}`,
-      downloadUrl: page
-        ? `${server}/api/jobs/${job.id}/pages/${page.id}/download`
-        : `${server}/api/jobs/${job.id}/download`,
+      translatedUrl: page?.translatedUrl || null,
+      originalUrl: page?.originalUrl || null,
+      thumbUrl: page?.thumbUrl || null,
+      editorUrl: page?.editorUrl || `${server}/#/job/${job.id}`,
+      downloadUrl: page?.downloadUrl || `${server}/api/jobs/${job.id}/download`,
+      zipUrl: `${server}/api/jobs/${job.id}/download`,
+      pages,
     },
   };
 }

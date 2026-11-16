@@ -42,7 +42,7 @@ OCR, terjemahan, pembersihan balon, dan penataan huruf dikerjakan secara lokal �
 - **Tata huruf adaptif**: teks Latin/Indonesia selalu horizontal dan tidak pernah diputar. Jika ruang sempit, teks dibungkus menjadi beberapa baris dan ukuran huruf dikecilkan; kata tidak dipotong di tengah kecuali benar-benar tidak muat. Ukuran mengikuti tinggi huruf asli, warna dipilih dari latar bersih, dan latar campuran otomatis diberi garis tepi kontras.
 - **Editor per halaman**: ubah terjemahan, lewati balon, atur jenis huruf, ukuran, warna, dan garis tepi; render ulang seketika.
 - **Viewer** dengan slider sebelum/sesudah, pin balon, zoom, dan navigasi halaman.
-- **Ekstensi Chrome** untuk menerjemahkan gambar manga langsung dari halaman web, termasuk mode auto translate dan screenshot dengan crop.
+- **Ekstensi Chrome** untuk menerjemahkan semua gambar manga di halaman web sekaligus dalam satu batch, termasuk mode terjemahkan otomatis dan screenshot dengan crop.
 - **Unduhan** per halaman atau satu chapter dalam ZIP (termasuk `dialog.txt`).
 - **Riwayat job** tersimpan di disk dan bisa dibuka kembali atau dihapus.
 - Antarmuka bahasa Indonesia, tema manga gelap, responsif untuk layar kecil.
@@ -129,8 +129,8 @@ Ekstensi membutuhkan Chrome 105+; shortcut `Ctrl+Shift+S` paling andal di Chrome
 
 ### Cara pakai singkat
 
-- **Terjemahkan halaman** — buka halaman manga, klik ikon MangaFlow, lalu klik **Terjemahkan halaman**. Gambar terbesar di halaman diganti dengan hasil terjemahan.
-- **Auto translate page** — aktifkan toggle agar halaman manga diproses otomatis saat dibuka.
+- **Terjemahkan halaman** — buka halaman manga, klik ikon MangaFlow, lalu klik **Terjemahkan N gambar**. Semua gambar manga yang sudah termuat dikirim sebagai satu job batch (maksimal 40 gambar / 450 MB) dan setiap gambar diganti dengan hasil terjemahannya.
+- **Terjemahkan otomatis** — aktifkan toggle agar semua gambar manga yang sudah termuat diproses otomatis saat halaman dibuka.
 - **Screenshot** — klik kartu **Screenshot** atau tekan `Ctrl+Shift+S` / `Command+Shift+S`, pilih crop, lalu **Terjemahkan area**. Berguna untuk canvas, background-image, atau situs dengan CSP ketat.
 - **Viewer** — hasil screenshot/halaman bisa dibandingkan sebelum-sesudah, diunduh, atau dibuka di editor MangaFlow.
 - **Pengaturan** — ubah alamat server (misalnya port 9000), mesin, gaya bahasa, dan bahasa target. Kunci API tetap diatur di halaman MangaFlow, bukan di ekstensi.
